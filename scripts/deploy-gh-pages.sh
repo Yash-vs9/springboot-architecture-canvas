@@ -8,8 +8,8 @@ touch dist/.nojekyll
 echo "Publishing dist to gh-pages branch..."
 cd dist
 git init -b gh-pages
-git config user.name "Yash-vs9"
-git config user.email "yash@users.noreply.github.com"
+git config user.name "Yash Vardhan Shukla"
+git config user.email "lakkyshukla74339@gmail.com"
 git add -A
 git commit -m "deploy: update GitHub Pages build $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
 
