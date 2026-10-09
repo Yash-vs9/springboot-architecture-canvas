@@ -28,6 +28,13 @@ export interface MethodDetail {
   returnType?: string;
 }
 
+export interface DeepDiveExecution {
+  stepByStepTrace: string[];
+  memoryAndThreadModel: string;
+  designPatterns: string[];
+  realWorldScenario?: string;
+}
+
 export interface SpringComponentNode {
   id: string;
   name: string;
@@ -46,6 +53,7 @@ export interface SpringComponentNode {
     answer: string;
   }[];
   configLevers: string[];
+  deepDive?: DeepDiveExecution;
   // Canvas layout
   x: number;
   y: number;

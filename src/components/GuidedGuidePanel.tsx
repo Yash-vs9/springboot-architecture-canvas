@@ -14,9 +14,12 @@ import {
   Layers,
   Eye,
   EyeOff,
-  ChevronDown
+  ChevronDown,
+  Bot,
+  Check
 } from 'lucide-react';
 import type { SimulationScenario, SimulationStep, SpringComponentNode } from '../data/types';
+import { generateStepPrompt } from '../utils/aiPromptGenerator';
 
 interface GuidedGuidePanelProps {
   scenarios: SimulationScenario[];
@@ -44,10 +47,19 @@ export const GuidedGuidePanel: FC<GuidedGuidePanelProps> = ({
 }) => {
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [isTimelineExpanded, setIsTimelineExpanded] = useState<boolean>(false);
+  const [copiedStepPrompt, setCopiedStepPrompt] = useState<boolean>(false);
 
   const steps = activeScenario.steps;
   const currentStep: SimulationStep | undefined = steps[currentStepIndex];
   const progressPercent = Math.round(((currentStepIndex + 1) / steps.length) * 100);
+
+  const handleCopyStepPrompt = () => {
+    if (!currentStep) return;
+    const prompt = generateStepPrompt(activeScenario, currentStep, activeNode);
+    navigator.clipboard.writeText(prompt);
+    setCopiedStepPrompt(true);
+    setTimeout(() => setCopiedStepPrompt(false), 2500);
+  };
 
   // Auto-play timer
   useEffect(() => {
@@ -218,16 +230,36 @@ export const GuidedGuidePanel: FC<GuidedGuidePanelProps> = ({
               </div>
             )}
 
-            {/* Deep-Dive Inspect Button */}
-            {activeNode && (
+            {/* Action Buttons: Inspect & Copy AI Prompt */}
+            <div className="space-y-2">
+              {activeNode && (
+                <button
+                  onClick={() => onOpenInspector(activeNode)}
+                  className="w-full py-2 px-3 rounded-xl bg-[#21262d] hover:bg-[#30363d] text-[#58a6ff] hover:text-white border border-[#30363d] font-medium text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-[#58a6ff]" />
+                  <span>Inspect Class Source Code, Pitfalls & Interview Questions</span>
+                </button>
+              )}
+
               <button
-                onClick={() => onOpenInspector(activeNode)}
-                className="w-full py-2 px-3 rounded-xl bg-[#21262d] hover:bg-[#30363d] text-[#58a6ff] hover:text-white border border-[#30363d] font-medium text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
+                onClick={handleCopyStepPrompt}
+                className="w-full py-2 px-3 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 hover:text-white border border-purple-500/30 font-medium text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
+                title="Copy an AI study prompt tailored for this specific step to paste into ChatGPT, Claude, or Gemini"
               >
-                <Sparkles className="w-3.5 h-3.5 text-[#58a6ff]" />
-                <span>Inspect Class Source Code, Pitfalls & Interview Questions</span>
+                {copiedStepPrompt ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-[#92ec56]" />
+                    <span className="text-[#92ec56]">AI Study Prompt Copied to Clipboard!</span>
+                  </>
+                ) : (
+                  <>
+                    <Bot className="w-3.5 h-3.5 text-purple-400" />
+                    <span>Copy AI Study Prompt for this Step</span>
+                  </>
+                )}
               </button>
-            )}
+            </div>
 
             {/* Collapsible Step Timeline Bar */}
             <div className="pt-2 border-t border-[#30363d]">

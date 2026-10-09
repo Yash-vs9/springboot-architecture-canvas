@@ -38,6 +38,18 @@ Accept: application/json`,
       'server.tomcat.threads.max=200',
       'server.tomcat.accept-count=100'
     ],
+    deepDive: {
+      stepByStepTrace: [
+        'Client initiates TCP 3-way handshake (SYN -> SYN-ACK -> ACK) targeting the Spring Boot server port (default 8080).',
+        'Linux kernel completes handshake and places socket in SYN backlog/accept queue of listening port.',
+        'Client serializes HTTP request: HTTP Verb (GET, POST), URI path (/api/orders/42), headers (Authorization: Bearer <token>, Accept: application/json), and payload.',
+        'TCP stream is packetized into IP MTU frames (~1500 bytes) and routed over network infrastructure.',
+        'Server NIC generates hardware interrupt, and Linux kernel reassembles packets into SocketChannel receive buffer.'
+      ],
+      memoryAndThreadModel: 'Allocated in OS kernel socket buffers (sk_buff) outside the JVM heap. Does not consume Java heap memory or Java worker threads until Tomcat Acceptor/Poller pulls the SocketChannel.',
+      designPatterns: ['Client-Server Architecture', 'Uniform Interface (REST)', 'Stateless Protocol'],
+      realWorldScenario: 'Mobile apps or React/Vue single page applications sending REST requests over TLS 1.3 to AWS Application Load Balancers which forward raw TCP to Spring Boot containers.'
+    },
     x: 40,
     y: 80,
     width: 220,
@@ -85,6 +97,19 @@ public class Acceptor implements Runnable {
       'server.tomcat.threads.max=200',
       'server.tomcat.connection-timeout=20000'
     ],
+    deepDive: {
+      stepByStepTrace: [
+        'Dedicated Acceptor thread loops on serverSocketChannel.accept(), waking up when kernel accept queue has an incoming connection.',
+        'Acceptor sets socket options (TCP_NODELAY, SO_KEEPALIVE) and hands the NioChannel to an available Poller thread queue.',
+        'Poller thread registers the SocketChannel with its Java NIO Selector for OP_READ interest.',
+        'When client transmits HTTP bytes, Selector.select() unblocks and returns ready SelectionKey.',
+        'Poller extracts SocketWrapperBase and submits a SocketProcessor task to the Tomcat ThreadPoolExecutor worker pool.',
+        'Assigned Worker thread (http-nio-8080-exec-*) calls Http11Processor.service(), parses HTTP bytes into Coyote Request/Response, and dispatches to Catalina Engine.'
+      ],
+      memoryAndThreadModel: '1-2 Acceptor threads + 2 Poller threads (NIO Selector event loop) + worker thread pool (min-spare: 10, max: 200). Idle keep-alive connections occupy negligible memory in the Selector without consuming worker threads.',
+      designPatterns: ['Reactor Pattern (NIO Selector)', 'Thread Pool / Worker Queue Pattern', 'Pipeline / Valve Pattern (Catalina Engine)'],
+      realWorldScenario: 'Handling 15,000 concurrent idle HTTP keep-alive browser connections with only 200 worker threads without crashing or running out of memory.'
+    },
     x: 300,
     y: 80,
     width: 260,
@@ -130,6 +155,18 @@ private void internalDoFilter(ServletRequest request, ServletResponse response) 
     configLevers: [
       'FilterRegistrationBean<MyFilter> bean with setOrder(Ordered.HIGHEST_PRECEDENCE)'
     ],
+    deepDive: {
+      stepByStepTrace: [
+        'Tomcat StandardWrapperValve creates or borrows an ApplicationFilterChain from the object pool.',
+        'Initializes internal filters array with matching FilterConfig entries and resets pos index to 0.',
+        'Calls internalDoFilter(request, response): if pos < n, retrieves filterConfig.getFilter() and increments pos.',
+        'Filter executes its custom logic (e.g., character encoding, CORS) and calls filterChain.doFilter(request, response).',
+        'When pos reaches n (all filters completed), calls this.servlet.service(request, response), transferring execution directly to DispatcherServlet.'
+      ],
+      memoryAndThreadModel: 'Synchronous execution on the assigned Tomcat worker thread. Filter instances are singletons shared across all concurrent requests; storing mutable request state in filter fields causes race conditions. ThreadLocal is mandatory for per-request state.',
+      designPatterns: ['Chain of Responsibility Pattern', 'Decorator Pattern (HttpServletRequestWrapper)', 'Composite Pattern'],
+      realWorldScenario: 'Enforcing security headers, character encodings, and distributed tracing MDC (Mapped Diagnostic Context) trace IDs before the request hits Spring MVC.'
+    },
     x: 600,
     y: 80,
     width: 260,
@@ -485,6 +522,21 @@ protected void doDispatch(HttpServletRequest request, HttpServletResponse respon
       'spring.mvc.servlet.path=/',
       'spring.mvc.throw-exception-if-no-handler-found=true'
     ],
+    deepDive: {
+      stepByStepTrace: [
+        'DispatcherServlet.service() -> FrameworkServlet.processRequest() delegates to doDispatch(request, response).',
+        '1. checkMultipart(): checks if request has Content-Type multipart/form-data and wraps into MultipartHttpServletRequest.',
+        '2. getHandler(): iterates through List<HandlerMapping> (chiefly RequestMappingHandlerMapping) to locate matching HandlerExecutionChain.',
+        '3. getHandlerAdapter(): queries List<HandlerAdapter> to find an adapter that supports the handler (e.g., RequestMappingHandlerAdapter).',
+        '4. mappedHandler.applyPreHandle(): executes preHandle() on all registered HandlerInterceptors. If any returns false, halts execution immediately.',
+        '5. ha.handle(): invokes controller method via reflection, binding path variables, query params, and JSON body.',
+        '6. mappedHandler.applyPostHandle(): executes postHandle() on interceptors in reverse order (skipped for @ResponseBody REST APIs).',
+        '7. processDispatchResult(): catches exceptions via HandlerExceptionResolver, renders view or finishes HTTP response, and calls mappedHandler.triggerAfterCompletion().'
+      ],
+      memoryAndThreadModel: 'Pure singleton bean. All state is stateless and thread-safe. ThreadLocal is accessed via RequestContextHolder to make HttpServletRequest accessible in service layers if needed.',
+      designPatterns: ['Front Controller Pattern', 'Adapter Pattern (HandlerAdapter)', 'Strategy Pattern (HandlerMapping, ViewResolver)', 'Chain of Responsibility (HandlerExecutionChain)'],
+      realWorldScenario: 'Central traffic controller handling 50,000+ RPS, managing uniform security, telemetry, CORS, argument resolution, and unified JSON error handling.'
+    },
     x: 40,
     y: 280,
     width: 280,

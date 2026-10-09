@@ -5,8 +5,11 @@ import {
   Cpu, 
   Database, 
   RefreshCw, 
-  GitBranch
+  GitBranch,
+  Bot,
+  Check
 } from 'lucide-react';
+import { generateIoCCachePrompt } from '../utils/aiPromptGenerator';
 
 interface IoCContainerMemoryModalProps {
   isOpen: boolean;
@@ -19,6 +22,14 @@ export const IoCContainerMemoryModal: FC<IoCContainerMemoryModalProps> = ({
 }) => {
   const [activeMemoryTab, setActiveMemoryTab] = useState<'CACHE_SIMULATOR' | 'HIERARCHY' | 'DATA_STRUCTURES'>('CACHE_SIMULATOR');
   const [cacheSimulationStep, setCacheSimulationStep] = useState<number>(0);
+  const [copiedPrompt, setCopiedPrompt] = useState<boolean>(false);
+
+  const handleCopyPrompt = () => {
+    const prompt = generateIoCCachePrompt();
+    navigator.clipboard.writeText(prompt);
+    setCopiedPrompt(true);
+    setTimeout(() => setCopiedPrompt(false), 2500);
+  };
 
   if (!isOpen) return null;
 
@@ -101,12 +112,32 @@ export const IoCContainerMemoryModal: FC<IoCContainerMemoryModalProps> = ({
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-[#8b949e] hover:text-white hover:bg-[#21262d] transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleCopyPrompt}
+              className="px-3 py-1.5 rounded-lg bg-amber-500/15 border border-amber-500/30 hover:bg-amber-500/25 text-amber-300 text-xs font-medium flex items-center gap-1.5 transition-colors"
+              title="Copy an exhaustive prompt explaining 3-level cache internals for ChatGPT / Claude"
+            >
+              {copiedPrompt ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-[#92ec56]" />
+                  <span className="text-[#92ec56]">Prompt Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Bot className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Copy 3-Level Cache AI Prompt</span>
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-[#8b949e] hover:text-white hover:bg-[#21262d] transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Navigation Tabs */}
