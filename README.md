@@ -2,6 +2,10 @@
 
 > **An interactive, developer-first visual architecture platform designed for software engineers and architects to master what happens behind the scenes in Spring Boot.**
 
+🌐 **Live Demo (GitHub Pages):** [https://yash-vs9.github.io/springboot-architecture-canvas/](https://yash-vs9.github.io/springboot-architecture-canvas/)
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FYash-vs9%2Fspringboot-architecture-canvas)
+
 ---
 
 ## 🌟 Highlights
