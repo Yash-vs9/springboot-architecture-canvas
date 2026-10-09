@@ -314,13 +314,13 @@ public void doFilter(ServletRequest request, ServletResponse response, FilterCha
   // -------------------------------------------------------------------------
   {
     id: 'sec_filter_context',
-    name: 'SecurityContextHolderFilter',
-    simpleName: '1. SecurityContextHolderFilter',
+    name: 'SecurityContextHolderFilter (pos: 300)',
+    simpleName: 'SecurityContextHolder (pos:300)',
     package: 'org.springframework.security.web.context.SecurityContextHolderFilter',
     category: 'SECURITY_FILTER',
     layer: 'Spring Security Filter Pipeline',
-    roleSummary: 'Loads SecurityContext from SecurityContextRepository into ThreadLocal SecurityContextHolder.',
-    lowLevelExplanation: 'In Spring Security 6, replaced SecurityContextPersistenceFilter. Loads existing SecurityContext (from HttpSession or header) and sets it in SecurityContextHolder. Guarantees cleaning up ThreadLocal on request completion via a finally block.',
+    roleSummary: 'SecurityFilterChain Filter #3 (pos:300). Loads SecurityContext from repository into ThreadLocal SecurityContextHolder.',
+    lowLevelExplanation: 'Canonical Filter #3 in Spring Security 6 (replaced legacy SecurityContextPersistenceFilter). Follows DisableEncodeUrlFilter and WebAsyncManagerIntegrationFilter. Loads SecurityContext lazily via a Supplier<SecurityContext> and clears ThreadLocal unconditionally in a finally block to prevent thread pool contamination.',
     executionOrder: 7,
     methods: [
       { name: 'doFilter', signature: 'void doFilter(ServletRequest req, ServletResponse res, FilterChain chain)', description: 'Loads SecurityContext, wraps in supplier, clears on finally.' }
@@ -354,13 +354,13 @@ try {
   },
   {
     id: 'sec_filter_csrf',
-    name: 'CsrfFilter',
-    simpleName: '2. CsrfFilter',
+    name: 'CsrfFilter (pos: 600)',
+    simpleName: 'CsrfFilter (pos:600)',
     package: 'org.springframework.security.web.csrf.CsrfFilter',
     category: 'SECURITY_FILTER',
     layer: 'Spring Security Filter Pipeline',
-    roleSummary: 'Protects state-modifying requests (POST, PUT, DELETE, PATCH) against Cross-Site Request Forgery.',
-    lowLevelExplanation: 'Checks if HTTP verb is read-only (GET, HEAD, TRACE, OPTIONS). If state-changing, retrieves token from request header/parameter and compares with expected token in CsrfTokenRepository. Throws InvalidCsrfTokenException (403) on mismatch.',
+    roleSummary: 'SecurityFilterChain Filter #6 (pos:600). Protects state-modifying requests (POST, PUT, DELETE, PATCH) against Cross-Site Request Forgery.',
+    lowLevelExplanation: 'Canonical Filter #6 in Spring Security. Follows CorsFilter and HeaderWriterFilter. Checks if HTTP verb is read-only (GET, HEAD, TRACE, OPTIONS). If state-changing, compares token in request header/parameter against CsrfTokenRepository. Throws InvalidCsrfTokenException (403) on mismatch.',
     executionOrder: 8,
     methods: [
       { name: 'doFilterInternal', signature: 'protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)', description: 'Validates CSRF token for unsafe HTTP verbs.' }
@@ -397,13 +397,13 @@ if (!csrfToken.getToken().equals(actualToken)) {
   },
   {
     id: 'sec_filter_auth',
-    name: 'BearerTokenAuthenticationFilter',
-    simpleName: '3. BearerTokenAuthFilter',
+    name: 'BearerTokenAuthenticationFilter (pos: 1300)',
+    simpleName: 'BearerTokenAuth (pos:1300)',
     package: 'org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter',
     category: 'SECURITY_FILTER',
     layer: 'Spring Security Filter Pipeline',
-    roleSummary: 'Extracts Bearer token (JWT) from Authorization header and delegates to AuthenticationManager.',
-    lowLevelExplanation: 'Resolves token string from header (Bearer <jwt>), constructs BearerTokenAuthenticationToken, calls AuthenticationManager.authenticate(token), and stores authenticated JwtAuthenticationToken in SecurityContextHolder.',
+    roleSummary: 'SecurityFilterChain Filter #10 (pos:1300). Extracts Bearer token (JWT) from Authorization header and delegates to AuthenticationManager.',
+    lowLevelExplanation: 'Canonical Filter #10 in Spring Security (Internal position ~1300, running after Form Login at ~800 and Basic Auth at ~1200). Resolves token string from header (Bearer <jwt>), constructs BearerTokenAuthenticationToken, calls AuthenticationManager.authenticate(token), and stores authenticated JwtAuthenticationToken in SecurityContextHolder.',
     executionOrder: 9,
     methods: [
       { name: 'doFilterInternal', signature: 'protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)', description: 'Extracts Bearer token, invokes authentication, saves to context.' }
@@ -440,13 +440,13 @@ filterChain.doFilter(request, response);`,
   },
   {
     id: 'sec_filter_authz',
-    name: 'AuthorizationFilter',
-    simpleName: '4. AuthorizationFilter',
+    name: 'AuthorizationFilter (pos: 2700)',
+    simpleName: 'AuthorizationFilter (pos:2700)',
     package: 'org.springframework.security.web.access.intercept.AuthorizationFilter',
     category: 'SECURITY_FILTER',
     layer: 'Spring Security Filter Pipeline',
-    roleSummary: 'Final security filter. Evaluates URL authorization rules (hasRole, authenticated, permitAll).',
-    lowLevelExplanation: 'Replaced FilterSecurityInterceptor. Evaluates AuthorizationManager.check(supplier, request). If AuthorizationDecision.isGranted() is false, throws AccessDeniedException. If true, passes to chain.doFilter().',
+    roleSummary: 'SecurityFilterChain Filter #17 (pos:2700). Final security filter evaluating URL authorization rules before DispatcherServlet.',
+    lowLevelExplanation: 'Canonical Filter #17 in Spring Security 6 (replaced legacy FilterSecurityInterceptor). Sits at the end of the SecurityFilterChain directly following ExceptionTranslationFilter. Evaluates AuthorizationManager.check(). If granted, forwards request to DispatcherServlet; if denied, throws AccessDeniedException caught by ExceptionTranslationFilter.',
     executionOrder: 10,
     methods: [
       { name: 'doFilter', signature: 'void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain chain)', description: 'Calls authorizationManager.check() and allows or denies access.' }
@@ -971,6 +971,21 @@ protected Object getSingleton(String beanName, boolean allowEarlyReference) {
       'spring.main.allow-circular-references=true',
       '@Lazy on constructor parameter'
     ],
+    deepDive: {
+      stepByStepTrace: [
+        'Client or container requests Bean A via getBean("beanA").',
+        'Checks singletonObjects (Level 1) -> not found. Marks beanA in singletonsCurrentlyInCreation Set.',
+        'doCreateBean: creates raw instance via reflection (Constructor). Immediately registers ObjectFactory lambda in singletonFactories (Level 3): () -> getEarlyBeanReference(beanA, mbd, bean).',
+        'populateBean: discovers dependency on Bean B. Calls getBean("beanB").',
+        'Bean B is instantiated, adds its factory to Level 3, and populates dependencies -> discovers dependency on Bean A!',
+        'Bean B calls getBean("beanA"): Level 1 miss -> Level 2 miss -> Level 3 HIT! Executes ObjectFactory.getObject(): SmartInstantiationAwareBeanPostProcessor generates early AOP proxy reference.',
+        'Bean A early proxy is stored in earlySingletonObjects (Level 2) and removed from Level 3. Bean B injects this early reference into its field and completes initialization.',
+        'Bean B is promoted to Level 1 singletonObjects. Bean A resumes populateBean with Bean B, finishes BeanPostProcessor callbacks, and is promoted to Level 1 while Level 2 is cleared.'
+      ],
+      memoryAndThreadModel: 'Level 1 (singletonObjects) is a ConcurrentHashMap. Access to Level 2 and Level 3 is synchronized on the singletonObjects monitor to guarantee strict thread safety during concurrent multi-threaded bean resolution.',
+      designPatterns: ['Multiton / Singleton Registry Pattern', 'Factory Method Pattern (ObjectFactory)', 'Lazy Evaluation', 'Double-Checked Locking'],
+      realWorldScenario: 'Resolving bidirectional relationships (e.g. OrderService needing NotificationService, and NotificationService needing OrderService for status queries) when spring.main.allow-circular-references=true is configured.'
+    },
     x: 1010,
     y: 100,
     width: 320,
@@ -1275,6 +1290,21 @@ return retVal;`,
       '@Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.READ_COMMITTED, rollbackFor = Exception.class)',
       '@EnableTransactionManagement(proxyTargetClass = true)'
     ],
+    deepDive: {
+      stepByStepTrace: [
+        'Caller invokes @Transactional method on Spring Bean.',
+        'Call is intercepted by CGLIB subclass proxy (Spring Boot sets spring.aop.proxy-target-class=true by default for all beans).',
+        'CGLIB DynamicAdvisedInterceptor delegates to TransactionInterceptor.invoke().',
+        'TransactionAspectSupport.invokeWithinTransaction() evaluates TransactionAttribute (propagation, isolation).',
+        'Acquires PlatformTransactionManager (e.g., JpaTransactionManager). If PROPAGATION_REQUIRED and no active transaction exists, borrows Connection from HikariCP, calls setAutoCommit(false), and binds ConnectionHolder to TransactionSynchronizationManager (ThreadLocal).',
+        'Proceeds with target method: invocation.proceedWithInvocation().',
+        'If target method throws RuntimeException or Error (unchecked), completeTransactionAfterThrowing() rolls back transaction. If checked Exception, commits unless rollbackFor=Exception.class.',
+        'On success: commitTransactionAfterReturning() flushes SQL, calls connection.commit(), unbinds ThreadLocal resource, and returns connection to HikariCP pool in finally block.'
+      ],
+      memoryAndThreadModel: 'Connection and TransactionStatus are held in ThreadLocal (TransactionSynchronizationManager). Transaction context DOES NOT propagate across thread boundaries (e.g. inside @Async, ExecutorService, or reactive streams) unless explicitly managed.',
+      designPatterns: ['Proxy Pattern (CGLIB bytecode subclass)', 'Around Advice (AOP)', 'Template Method Pattern', 'Strategy Pattern (PlatformTransactionManager)'],
+      realWorldScenario: 'Ensuring atomicity across multiple repository operations during payment checkout, guaranteeing rollback if inventory deduction fails.'
+    },
     x: 40,
     y: 120,
     width: 300,

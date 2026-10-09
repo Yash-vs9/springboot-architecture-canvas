@@ -7,7 +7,8 @@ import {
   RefreshCw, 
   GitBranch,
   Bot,
-  Check
+  Check,
+  AlertTriangle
 } from 'lucide-react';
 import { generateIoCCachePrompt } from '../utils/aiPromptGenerator';
 
@@ -184,6 +185,19 @@ export const IoCContainerMemoryModal: FC<IoCContainerMemoryModalProps> = ({
           {/* TAB 1: 3-LEVEL CACHE SIMULATOR */}
           {activeMemoryTab === 'CACHE_SIMULATOR' && (
             <div className="space-y-6">
+              {/* Modern Spring Boot 3.x / 2.6+ Architectural Reality Banner */}
+              <div className="bg-amber-950/30 border border-amber-500/40 rounded-xl p-3.5 flex items-start gap-3 text-xs">
+                <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <span className="font-bold text-amber-300 block">
+                    Important Spring Boot 3.x / 2.6+ Architectural Specification:
+                  </span>
+                  <p className="text-amber-200/90 leading-relaxed">
+                    By default in Spring Boot 2.6+ and 3.x, circular references are <strong>disabled</strong> (<code className="bg-black/40 px-1 py-0.5 rounded text-amber-300 font-mono">spring.main.allow-circular-references=false</code>). The 3-level cache mechanism below is Spring Framework's internal engine (<code className="bg-black/40 px-1 py-0.5 rounded text-amber-300 font-mono">DefaultSingletonBeanRegistry</code>) that resolves field/setter circular dependencies when enabled or in standalone Spring Framework. Note: Constructor-based circular references can <strong>never</strong> be resolved by the cache.
+                  </p>
+                </div>
+              </div>
+
               {/* Stepper controls */}
               <div className="flex items-center justify-between bg-[#161b22] p-3.5 rounded-xl border border-[#30363d]">
                 <div>

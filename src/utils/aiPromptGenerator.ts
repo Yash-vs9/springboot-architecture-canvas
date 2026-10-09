@@ -37,7 +37,7 @@ export function generateNodePrompt(node: SpringComponentNode): string {
 
   return `You are a Principal Java & Spring Framework Engineer, Spring Core Contributor, and JVM Internals Specialist.
 
-Please give me an exhaustive, production-grade deep-dive explanation of the following Spring Boot 3.x / Spring 6 architectural component:
+Please give me an exhaustive, production-grade deep-dive explanation of the following Spring Boot 3.x / Spring Framework 6.x / Jakarta EE 10 architectural component:
 
 ============================================================
 COMPONENT: ${node.name} (${node.simpleName})
@@ -45,6 +45,7 @@ CLASS: ${node.package}.${node.simpleName}
 LAYER: ${node.layer} (Category: ${node.category})
 ${node.executionOrder ? `PIPELINE ORDER: Phase #${node.executionOrder}` : ''}
 TAGS: ${node.tags.join(', ')}
+SPECIFICATION CONTEXT: Spring Boot 3.x / Spring Framework 6.x / Jakarta Servlet 6.0
 ============================================================
 
 CONTEXT FROM SPRINGLENS BLUEPRINT:
